@@ -1,0 +1,63 @@
+Glide里面是如何做到加载图片暂停,取消 请求?
+
+是通过空的Fragment页面来实现的,因为glide设置成fragment与activity生命周期完美结合,所以是通过
+activity和fragment的生命周期自动开启和停止的,
+
+Glide.with   将当前显示的页面对象传入Glide
+SupportRequestManagerFragment  空的fragment  监听当前页面的生命周期
+ActivityFragmentLifecycle   观察者模式，fragment的生命周期交给了他
+
+------------------------------------------------------
+Glide.with   将当前显示的页面对象传入Glide
+SupportRequestManagerFragment  空的fragment  监听当前页面的生命周期
+ActivityFragmentLifecycle   观察者模式，fragment的生命周期交给了他
+Request previous = target.getRequest();
+if(previous != null) {
+判断当前的ImageView是否存在了请求
+如果存在 将请求取消
+并且回收资源
+    previous.clear();
+    this.requestTracker.removeRequest(previous);
+    previous.recycle();
+}
+New BitmapRequest
+创建请求  request是一个接口
+Request request = this.buildRequest(target);
+开始执行请求
+this.requestTracker.runRequest(request);
+
+请求的实现类
+GenericRequest
+
+Begin开始请求
+DataFetcher 加载器  是一个接口
+返回的子类型 是根据第一个参数 model 来确定
+DataFetcher dataFetcher = modelLoader.getResourceFetcher(this.model, width, height);
+
+this.loadStatus = this.engine.load(this.signature, width, height, dataFetcher, this.loadProvider, this.transformation, transcoder, this.priority, this.isMemoryCacheable, this.diskCacheStrategy, this);
+把请求丢给图像处理引擎 处理图片
+
+判断内存是否缓存了这张图片
+EngineResource cached = this.loadFromCache(key, isMemoryCacheable);
+
+负责加载每一个请求，它里面有线程池成员变量
+EngineJob
+
+实现Runable接口，具体执行请求逻辑  run（）
+功能：请求资源，处理资源，缓存资源
+EngineRunnable
+
+解析图片，返回glide里面的resource对象
+resource = this.decode();
+专门解析图片
+decodeJob
+通过加载器 实现图片加载   他是运行子线程  run方法被调用
+加载网络图片时  data是inputStream类型
+Object data = this.fetcher.loadData(this.priority);
+
+解析Urlconnectiong返回的InputStream流对象
+StreamBitmapDecoder
+
+
+extends  可用于的返回类型限定，不能用于参数类型的限定
+super    可用于参数类型的限定，不能用于返回类型的限定
